@@ -1,3 +1,5 @@
 {
-	"discord_api_key": "YOURAPIKEYHERE"
+	"discord_api_key": null,
+	"prefix": null,
+	"example_key": "example data!"
 }
