@@ -1,6 +1,12 @@
 import json
+import importlib
+from pathlib import Path
 
-class Commands:
+class Command:
+    def __init__(self, commandlist):
+        self.commandlist = commandlist
+
+class CommandHandler:
     """Class commands, commands can use server id to sort data"""
     def __init__(self, data):
         # use the bot's data folder that's passed in.
@@ -8,26 +14,21 @@ class Commands:
         self.data_folder = data
         self._commandlist = [
             {
-                "name": "test",
-                "alias": ["testing", "moretesting"],
-                "function": self.test
-            },
-            {
-                "name": "testadd",
-                "alias": [],
-                "function": self.test_add_data
-            },
-            {
-                "name": "testclear",
-                "alias": [],
-                "function": self.test_clear
-            },
-            {
+                "module": "base",
                 "name": "source",
                 "alias": ["github", "sourcecode"],
                 "function": lambda a,b: "Source code: https://github.com/Savestate2A03/deerbot-dev/"
             },
         ]
+
+        # import modules based on name (in the commands directory)
+        added_modules = ["test"]
+        for module in added_modules:
+            imported_module = importlib.import_module("." + module, package="deerbot_dev.commandhandler.commands")
+            commands = imported_module.Command(self)
+            for c in commands.commandlist:
+                c["module"] = module # document what module the command is from
+            self._commandlist.extend(commands.commandlist)
 
     # this just gets the server.json and returns it as a dict
     def _server_db(self, server):
@@ -48,24 +49,6 @@ class Commands:
 
         with open(server_db, "w") as sdb: 
             json.dump(db, sdb)
-
-    # testing commands
-    def test(self, server, params):
-        return "server id: " + str(server) + ", server database: " + str(self._server_db(server))
-
-    def test_add_data(self, server, params):
-        db = self._server_db(server)
-        if "test_array" not in db:
-            db["test_array"] = []
-        db["test_array"].append(params)
-        self._save_server_db(server, db)
-        return "added '" + params + "' to test database!"
-
-    def test_clear(self, server, params):
-        db = self._server_db(server)
-        db["test_array"] = []
-        self._save_server_db(server, db)
-        return "cleared test database!"
 
     def decode(self, server, user_command, params):
         # lower the user command for consistency

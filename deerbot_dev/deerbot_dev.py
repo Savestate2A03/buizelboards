@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-from deerbot_dev.commands import commands
+from deerbot_dev.commandhandler.ch import CommandHandler
 
 # subclass of the discord client itself. we add some functionality to
 # it and then call the super when we're done setting our stuff up.
@@ -40,7 +40,7 @@ class DeerbotDev(discord.Client):
             self.settings = json.load(info)
 
         # set up commands
-        self.cmds = commands.Commands(self.data)
+        self.commandhandler = CommandHandler(self.data)
 
         # set up bot
         super().__init__()
@@ -70,6 +70,6 @@ class DeerbotDev(discord.Client):
                 # don't think this should ever trigger, but just in case
                 print("command detected, regex search failed: " + message.content.strip())
                 return
-            command_response = self.cmds.decode(message.guild.id, match.group(1), match.group(2))
+            command_response = self.commandhandler.decode(message.guild.id, match.group(1), match.group(2))
             if command_response is not None:
                 await message.channel.send(command_response)
