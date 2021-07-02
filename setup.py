@@ -7,5 +7,5 @@ setup(name='deerbot-dev',
       description='deerbot-dev development bot',
       author='Savestate',
       author_email='joseph.elkhouri@gmail.com',
-      packages=['python', 'requests'],
+      packages=['deerbot_dev', 'deerbot_dev.commands'],
      )
