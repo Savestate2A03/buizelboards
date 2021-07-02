@@ -1,6 +1,12 @@
 class Commands:
     """Class commands, commands can use server id to sort data"""
-    def server_data(server):
+    def __init__(self, data):
+        self.data = data
+
+    def _get_server_data(server):
+        pass
+
+    def _write_server_data(server, data):
         pass
 
     def test(self, server, params):

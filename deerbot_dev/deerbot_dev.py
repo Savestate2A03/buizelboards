@@ -9,32 +9,36 @@ from deerbot_dev.commands import commands
 
 class DeerbotDev(discord.Client):
 
-    # data folder containing all bot data
-    data = Path(Path(__file__).parent.resolve().joinpath("data"))
+    def __init__(self):
+        # data folder containing all bot data
+        self.data = Path(Path(__file__).parent.resolve().joinpath("data"))
 
-    # if we don't have data made, copy it from the sample data folder and prompt for required user input
-    if not data.is_dir():
-        sample_data = Path(Path(__file__).parent.resolve().joinpath("sample_data"))
-        shutil.copytree(sample_data, data)
-        info_dict = None
+        # if we don't have data made, copy it from the sample data folder and prompt for required user input
+        if not self.data.is_dir():
+            sample_data = Path(Path(__file__).parent.resolve().joinpath("sample_data"))
+            shutil.copytree(sample_data, self.data)
+            info_dict = None
 
-        with open(data.joinpath("info.json"), "r") as info: 
-            info_dict = json.load(info)
-            for setting in info_dict.keys():
-                if info_dict[setting] is None:
-                    user_input = input(setting + " -> ")
-                    info_dict[setting] = user_input
+            with open(self.data.joinpath("info.json"), "r") as info: 
+                info_dict = json.load(info)
+                for setting in info_dict.keys():
+                    if info_dict[setting] is None:
+                        user_input = input(setting + " -> ")
+                        info_dict[setting] = user_input
 
-        with open(data.joinpath("info.json"), "w") as info: 
-            json.dump(info_dict, info, indent = 4)
+            with open(self.data.joinpath("info.json"), "w") as info: 
+                json.dump(info_dict, info, indent = 4)
 
-    # load bot settings
-    settings = None
-    with open(data.joinpath("info.json"), "r") as info: 
-        settings = json.load(info)
+        # load bot settings
+        self.settings = None
+        with open(self.data.joinpath("info.json"), "r") as info: 
+            self.settings = json.load(info)
 
-    # setup commands
-    cmds = commands.Commands()
+        # set up commands
+        self.cmds = commands.Commands(self.data)
+
+        # set up bot
+        super().__init__()
 
     def api_key(self):
         return self.settings["discord_api_key"]
