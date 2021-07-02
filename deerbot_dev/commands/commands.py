@@ -6,6 +6,28 @@ class Commands:
         # use the bot's data folder that's passed in.
         # server json files will be stored here!
         self.data_folder = data
+        self._commandlist = [
+            {
+                "name": "test",
+                "alias": ["testing", "moretesting"],
+                "function": self.test
+            },
+            {
+                "name": "testadd",
+                "alias": [],
+                "function": self.test_add_data
+            },
+            {
+                "name": "testclear",
+                "alias": [],
+                "function": self.test_clear
+            },
+            {
+                "name": "source",
+                "alias": ["github", "sourcecode"],
+                "function": lambda a,b: "Source code: https://github.com/Savestate2A03/deerbot-dev/"
+            },
+        ]
 
     # this just gets the server.json and returns it as a dict
     def _server_db(self, server):
@@ -27,8 +49,7 @@ class Commands:
         with open(server_db, "w") as sdb: 
             json.dump(db, sdb)
 
-    # commands
-
+    # testing commands
     def test(self, server, params):
         return "server id: " + str(server) + ", server database: " + str(self._server_db(server))
 
@@ -40,23 +61,11 @@ class Commands:
         self._save_server_db(server, db)
         return "added '" + params + "' to test database!"
 
-    _commandlist = [
-        {
-            "name": "test",
-            "alias": ["testing", "moretesting"],
-            "function": test
-        },
-        {
-            "name": "testadd",
-            "alias": [],
-            "function": test_add_data
-        },
-        {
-            "name": "source",
-            "alias": ["github", "sourcecode"],
-            "function": lambda a,b,c: "Source code: https://github.com/Savestate2A03/deerbot-dev/"
-        },        
-    ]
+    def test_clear(self, server, params):
+        db = self._server_db(server)
+        db["test_array"] = []
+        self._save_server_db(server, db)
+        return "cleared test database!"
 
     def decode(self, server, user_command, params):
         # lower the user command for consistency
@@ -64,6 +73,6 @@ class Commands:
         # search through the _commandlist array for one that matches our command
         for command in self._commandlist:
             if user_command == command["name"] or user_command in command["alias"]:
-                return command["function"](self, server, params)
+                return command["function"](server, params)
         # if no command is found, return None
         return None
