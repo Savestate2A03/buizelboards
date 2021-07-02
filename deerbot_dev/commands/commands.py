@@ -3,22 +3,24 @@ import json
 class Commands:
     """Class commands, commands can use server id to sort data"""
     def __init__(self, data):
+        # use the bot's data folder that's passed in.
+        # server json files will be stored here!
         self.data_folder = data
 
+    # this just gets the server.json and returns it as a dict
     def _server_db(self, server):
         server_db = self.data_folder.joinpath(str(server) + ".json")
 
+        # create essentially empty server json if not found
         if not server_db.is_file():
             with open(server_db, "w") as sdb: 
                 json.dump({"id": server}, sdb)
 
-        server_json = None
-
+        # return the json as a dict using json.load
         with open(server_db, "r") as sd: 
-            server_json = json.load(sd)
+            return json.load(sd)
 
-        return server_json
-
+    # pass in a server id and a dict to save it as the server database
     def _save_server_db(self, server, db):
         server_db = self.data_folder.joinpath(str(server) + ".json")
 
@@ -57,8 +59,11 @@ class Commands:
     ]
 
     def decode(self, server, user_command, params):
+        # lower the user command for consistency
         user_command = user_command.lower()
+        # search through the _commandlist array for one that matches our command
         for command in self._commandlist:
             if user_command == command["name"] or user_command in command["alias"]:
                 return command["function"](self, server, params)
+        # if no command is found, return None
         return None
