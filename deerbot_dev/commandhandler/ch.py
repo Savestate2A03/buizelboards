@@ -22,7 +22,7 @@ class CommandHandler:
         ]
 
         # import modules based on name (in the commands directory)
-        added_modules = ["test"]
+        added_modules = ["test", "lumch"]
         for module in added_modules:
             imported_module = importlib.import_module("." + module, package="deerbot_dev.commandhandler.commands")
             commands = imported_module.Command(self)
@@ -50,12 +50,12 @@ class CommandHandler:
         with open(server_db, "w") as sdb: 
             json.dump(db, sdb)
 
-    def decode(self, server, user_command, params):
+    def decode(self, server, user_command, params, message):
         # lower the user command for consistency
         user_command = user_command.lower()
         # search through the _commandlist array for one that matches our command
         for command in self._commandlist:
             if user_command == command["name"] or user_command in command["alias"]:
-                return command["function"](server, params)
+                return command["function"](server, params, message)
         # if no command is found, return None
         return None

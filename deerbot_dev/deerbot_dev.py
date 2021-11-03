@@ -65,11 +65,11 @@ class DeerbotDev(discord.Client):
         if message.content.strip().startswith(self.prefix()):
             try: 
                 # regex matching a command format, not using prefix yet
-                match = re.search(r'^\.(\S+)\s*(.*)$', message.content.strip())
+                match = re.search(r'^!(\S+)\s*(.*)$', message.content.strip())
             except:
                 # don't think this should ever trigger, but just in case
                 print("command detected, regex search failed: " + message.content.strip())
                 return
-            command_response = self.commandhandler.decode(message.guild.id, match.group(1), match.group(2))
+            command_response = self.commandhandler.decode(message.guild.id, match.group(1), match.group(2), message)
             if command_response is not None:
                 await message.channel.send(command_response)
