@@ -59,7 +59,7 @@ class Command(ch.Command):
             db["lumch"] = []
         if params.lower() not in [x.lower() for x in db["lumch"]]:
             return "Lumch to remove doesn't exist!"
-        db["lumch"] = [x for x in db["lumch"] if x.lower() not in map(str.lower, db["lumch"])] 
+        db["lumch"] = [x for x in db["lumch"] if x.lower() != params.lower()]
         self.commandhandler._save_server_db(server, db)
         return "Removed '" + params + "' from lumch!"
 
