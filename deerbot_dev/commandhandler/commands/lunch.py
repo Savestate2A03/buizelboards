@@ -71,7 +71,7 @@ class Command(ch.Command):
         results = []
 
         location = escape(f'{user_db["location"]["lat"]} {user_db["location"]["lng"]}')
-        url      = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={location}&key={key}&keyword=food&radius=1500&maxprice=2'
+        url      = f'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={location}&key={key}&keyword=food&radius=1700&maxprice=2'
 
         while True:
             response = requests.request("GET", url, headers=headers, data=payload)
