@@ -85,11 +85,11 @@ class Command(ch.Command):
         prune = []
         for i in range(len(players)):
             if not slippi_players["data"][f"item{i}"]:
-                prune.append(players[i])
+                prune.append({"player": players[i], "exists": False})
                 continue
             profile = slippi_players["data"][f"item{i}"]["user"]["rankedNetplayProfile"]
             if not profile["wins"] and not profile["losses"]:
-                prune.append(players[i])
+                prune.append({"player": players[i], "exists": True})
         return prune
 
     def _format_players(self, slippi_players):
@@ -116,8 +116,9 @@ class Command(ch.Command):
             return None
         slippi_players = self._get_users(db["players"])
         pruned = self._prune_list(slippi_players, db["players"])
-        for player in pruned:
-            db["players"].remove(player)
+        for prune in pruned:
+            if not prune["exists"]:
+                db["players"].remove(player)
         self.commandhandler._save_server_db(server, db)
         return {
             "players": self._format_players(slippi_players),
@@ -198,19 +199,35 @@ class Command(ch.Command):
         embed.add_field(name="", value=leaderboard, inline=False)
         return embed
 
+    def _finalize(self, embed, rankings):
+        if rankings["pruned"]:
+            unranked = []
+            removed = []
+            for prune in pruned:
+                if prune["exists"]:
+                    unranked.append(prune["player"])
+                else:
+                    removed.append(prune["player"])
+            msg = ""
+            if unranked:
+                joined = [('`' + player + '`') for player in unranked]
+                msg += f"\nUnranked not included: {', '.join(unranked)}"
+            if removed:
+                joined = [('`' + player + '`') for player in removed]
+                msg += f"\nPlayers removed for not existing: {', '.join(removed)}"
+            return {
+                "msg": msg,
+                "embed": embed
+            }
+        else:
+            return embed
+
     def leaderboards(self, server, params, message):
         rankings = self._get_all_rankings(server)
         if not rankings:
             return "No players in server database! Add them with !rankadd"
         embed = self._top(rankings["players"], message.guild.name)
-        if rankings["pruned"]:
-            pruned = [('`' + player + '`') for player in rankings['pruned']]
-            return {
-                "msg": f"Removed for not existing / having no ranked sets: {', '.join(pruned)}",
-                "embed": embed
-            }
-        else:
-            return embed
+        return self._finalize(embed, rankings)
 
     def rank(self, server, params, message):
         rankings = self._get_all_rankings(server)
@@ -219,14 +236,7 @@ class Command(ch.Command):
         if not self._does_player_exist(rankings["players"], params):
             return "Player not found in server database!"
         embed = self._specific_rank(rankings["players"], params, message.guild.name)
-        if rankings["pruned"]:
-            pruned = [('`' + player + '`') for player in rankings['pruned']]
-            return {
-                "msg": f"Removed for not existing / having no ranked sets: {', '.join(pruned)}",
-                "embed": embed
-            }
-        else:
-            return embed
+        return self._finalize(embed, rankings)
 
     def rankadd(self, server, params, message):
         self._check_and_generate_db(server)
