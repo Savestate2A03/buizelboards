@@ -203,7 +203,7 @@ class Command(ch.Command):
         if rankings["pruned"]:
             unranked = []
             removed = []
-            for prune in pruned:
+            for prune in rankings["pruned"]:
                 if prune["exists"]:
                     unranked.append(prune["player"])
                 else:
