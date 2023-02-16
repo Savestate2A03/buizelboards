@@ -118,7 +118,7 @@ class Command(ch.Command):
         pruned = self._prune_list(slippi_players, db["players"])
         for prune in pruned:
             if not prune["exists"]:
-                db["players"].remove(player)
+                db["players"].remove(prune["player"])
         self.commandhandler._save_server_db(server, db)
         return {
             "players": self._format_players(slippi_players),
