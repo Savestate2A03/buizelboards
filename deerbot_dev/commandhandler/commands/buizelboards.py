@@ -113,7 +113,7 @@ class Command(ch.Command):
         self._check_and_generate_db(server)
         db = self.commandhandler._server_db(server)
         if not db["players"]:
-            return "No players in server database! Add them with !rankadd"
+            return None
         slippi_players = self._get_users(db["players"])
         pruned = self._prune_list(slippi_players, db["players"])
         for player in pruned:
@@ -200,6 +200,8 @@ class Command(ch.Command):
 
     def leaderboards(self, server, params, message):
         rankings = self._get_all_rankings(server)
+        if not rankings:
+            return "No players in server database! Add them with !rankadd"
         embed = self._top(rankings["players"], message.guild.name)
         if rankings["pruned"]:
             pruned = [('`' + player + '`') for player in rankings['pruned']]
@@ -212,6 +214,8 @@ class Command(ch.Command):
 
     def rank(self, server, params, message):
         rankings = self._get_all_rankings(server)
+        if not rankings:
+            return "No players in server database! Add them with !rankadd"
         if not self._does_player_exist(rankings["players"], params):
             return "Player not found in server database!"
         embed = self._specific_rank(rankings["players"], params, message.guild.name)
