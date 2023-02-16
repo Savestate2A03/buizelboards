@@ -68,14 +68,19 @@ class DeerbotDev(discord.Client):
         if message.author == self.user:
             return
 
-        if message.content.strip().startswith(self.prefix()):
+        server_prefix = self.commandhandler.get_server_prefix(message.guild.id)
+        if message.content.strip().startswith(server_prefix):
             try: 
                 # regex matching a command format, not using prefix yet
-                match = re.search(r'^!(\S+)\s*(.*)$', message.content.strip())
+                match = re.search(r'^' + re.escape(server_prefix) + r'(\S+)\s*(.*)$', message.content.strip())
             except:
                 # don't think this should ever trigger, but just in case
                 print("command detected, regex search failed: " + message.content.strip())
                 return
             command_response = self.commandhandler.decode(message.guild.id, match.group(1), match.group(2), message)
-            if command_response is not None:
+            if type(command_response) is discord.Embed:
+                await message.channel.send(embed=command_response)
+            elif type(command_response) is str:
                 await message.channel.send(command_response)
+            elif type(command_response) is dict:
+                await message.channel.send(command_response["msg"], embed=command_response["embed"])

@@ -1,12 +1,14 @@
 from deerbot_dev.commandhandler import ch
 import requests
+import discord
+import re
 
 class Command(ch.Command): 
     def __init__(self, commandhandler):
         commandlist = [
                 {
-                    "name": "leaderboards",
-                    "alias": ["boards"],
+                    "name": "leaderboard",
+                    "alias": ["boards", "leaderboards", "board"],
                     "function": self.leaderboards
                 },
                 {
@@ -28,11 +30,21 @@ class Command(ch.Command):
         self.commandhandler = commandhandler
         super().__init__(commandlist)
 
-    def _get_user(self, connect_code):
+    def _check_and_generate_db(self, server):
+        db = self.commandhandler._server_db(server)
+        if "prefix" not in db:
+            db["prefix"] = "!"
+        if "players" not in db:
+            db["players"] = []
+        self.commandhandler._save_server_db(server, db)
+
+    def _get_users(self, connect_codes):
+
         graphql_connect_codes = ""
-        for i in range(5):
+
+        for i in range(len(connect_codes)):
             graphql_connect_codes += f"""
-                item{i}: getConnectCode(code: $cc) {{
+                item{i}: getConnectCode(code: "{connect_codes[i]}") {{
                     user {{
                         ...userRankedInfo
                         __typename
@@ -40,6 +52,7 @@ class Command(ch.Command):
                 __typename
                 }}
             """
+
         operation_name = "RankedSlippiQuery"
         query = """
             fragment userRankedInfo on User {
@@ -57,58 +70,167 @@ class Command(ch.Command):
                 __typename
             }
 
-            query RankedSlippiQuery($cc: String!) {
+            query RankedSlippiQuery {
         """ + graphql_connect_codes + """       
             }
         """
-        variables = {
-            "cc": connect_code
-        }
         url = "https://gql-gateway-dot-slippi.uc.r.appspot.com/graphql"
-        headers = {
-            "Host": "gql-gateway-dot-slippi.uc.r.appspot.com",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/109.0",
-            "Accept": "*/*",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Referer": "https://slippi.gg/",
-            "content-type": "application/json",
-            "apollographql-client-name": "slippi-web",
-            "Origin": "https://slippi.gg",
-            "DNT": "1",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "cross-site",
-            "TE": "trailers"
-        }
-
         response = requests.post(url=url, json={
             "operationName": operation_name,
             "query": query,
-            "variables": variables
         })
-        return f"```json\n{response.json()}```"
+        return response.json()
 
-    def _check_and_generate_db(self, server):
+    def _prune_list(self, slippi_players, players):
+        prune = []
+        for i in range(len(players)):
+            if not slippi_players["data"][f"item{i}"]:
+                prune.append(players[i])
+                continue
+            profile = slippi_players["data"][f"item{i}"]["user"]["rankedNetplayProfile"]
+            if not profile["wins"] and not profile["losses"]:
+                prune.append(players[i])
+        return prune
+
+    def _format_players(self, slippi_players):
+        players = slippi_players["data"]
+        formatted_players = []
+        for player in players:
+            if not players[player]:
+                continue
+            profile = players[player]["user"]["rankedNetplayProfile"]
+            if not profile["wins"] and not profile["losses"]:
+                continue
+            formatted_players.append({
+                "tag": players[player]["user"]["displayName"],
+                "connect_code": players[player]["user"]["connectCode"]["code"],
+                "rating": players[player]["user"]["rankedNetplayProfile"]["ratingOrdinal"]
+            })
+        formatted_players.sort(key=lambda p: p["rating"], reverse=True)
+        return formatted_players
+
+    def _get_all_rankings(self, server):
+        self._check_and_generate_db(server)
         db = self.commandhandler._server_db(server)
-        if "prefix" not in db:
-            db["prefix"] = "!"
-        if "players" not in db:
-            db["players"] = []
+        if not db["players"]:
+            return "No players in server database! Add them with !rankadd"
+        slippi_players = self._get_users(db["players"])
+        pruned = self._prune_list(slippi_players, db["players"])
+        for player in pruned:
+            db["players"].remove(player)
         self.commandhandler._save_server_db(server, db)
+        return {
+            "players": self._format_players(slippi_players),
+            "pruned": pruned
+        }
+
+    def _does_player_exist(self, players, connect_code):
+        for player in players:
+            if player["connect_code"] == connect_code.upper():
+                return True
+        return False
+
+    def _top(self, players, server_name):
+        limit = 15
+        leaderboard = ""
+        rank = 1
+        for player in players:
+            if rank == limit + 1:
+                leaderboard += f"...\n{len(players)-limit} players not shown"
+                break
+            if rank == 1:
+                leaderboard += "🥇 "
+            elif rank == 2:
+                leaderboard += "🥈 "
+            elif rank == 3:
+                leaderboard += "🥉 "
+            else:
+                leaderboard += f"{rank}. "
+            leaderboard += f"**{discord.utils.escape_markdown(player['tag'])}** ({player['connect_code']}) - {'{:.2f}'.format(round(player['rating'], 2))}\n"
+            rank += 1
+        embed=discord.Embed(title="🏆 Slippi Leaderboard", description=f"{server_name}'s leaderboard", color=0x18f334)
+        embed.add_field(name="", value=leaderboard, inline=False)
+        return embed
+
+    def _specific_rank(self, players, connect_code, server_name):
+        limit = 4
+        leaderboard = ""
+        rank = 1
+        player_rank = 1
+        for player in players:
+            if player["connect_code"] == connect_code.upper():
+                break
+            player_rank += 1
+        start_players_at = 1 if player_rank-limit < 1 else player_rank-limit
+        end_players_at = len(players) if player_rank+limit > len(players) else player_rank+limit
+        if player_rank-limit < 1:
+            end_players_at += limit - (player_rank + 1)
+        if player_rank+limit > len(players):
+            start_players_at -= limit - (len(players) - player_rank)
+        start_dots = False
+        end_dots = False
+        for player in players:
+            if rank < start_players_at:
+                if not start_dots:
+                    leaderboard += f"...\n"
+                    start_dots = True
+                rank += 1
+                continue
+            if rank > end_players_at:
+                if not end_dots:
+                    leaderboard += f"...\n"
+                    end_dots = True
+                rank += 1
+                break
+            if player["connect_code"] == connect_code.upper():
+                leaderboard += " --> "
+            if rank == 1:
+                leaderboard += "🥇 "
+            elif rank == 2:
+                leaderboard += "🥈 "
+            elif rank == 3:
+                leaderboard += "🥉 "
+            else:
+                leaderboard += f"{rank}. "
+            leaderboard += f"**{discord.utils.escape_markdown(player['tag'])}** ({player['connect_code']}) - {'{:.2f}'.format(round(player['rating'], 2))}\n"
+            rank += 1
+        embed=discord.Embed(title="🏆 Slippi Leaderboard", description=f"{server_name}'s leaderboard", color=0x18f334)
+        embed.add_field(name="", value=leaderboard, inline=False)
+        return embed
 
     def leaderboards(self, server, params, message):
-        self._check_and_generate_db(server)
-        return self._get_user(params)
+        rankings = self._get_all_rankings(server)
+        embed = self._top(rankings["players"], message.guild.name)
+        if rankings["pruned"]:
+            pruned = [('`' + player + '`') for player in rankings['pruned']]
+            return {
+                "msg": f"Removed for not existing / having no ranked sets: {', '.join(pruned)}",
+                "embed": embed
+            }
+        else:
+            return embed
 
     def rank(self, server, params, message):
-        self._check_and_generate_db(server)
-        pass
+        rankings = self._get_all_rankings(server)
+        if not self._does_player_exist(rankings["players"], params):
+            return "Player not found in server database!"
+        embed = self._specific_rank(rankings["players"], params, message.guild.name)
+        if rankings["pruned"]:
+            pruned = [('`' + player + '`') for player in rankings['pruned']]
+            return {
+                "msg": f"Removed for not existing / having no ranked sets: {', '.join(pruned)}",
+                "embed": embed
+            }
+        else:
+            return embed
 
     def rankadd(self, server, params, message):
         self._check_and_generate_db(server)
         db = self.commandhandler._server_db(server)
         params = params.upper()
+        code_check = re.compile(r"^[A-Z0-9]{1,6}#[0-9]{1,3}$")
+        if not code_check.search(params):
+            return f"Not a valid connect code! Please check your formatting."
         if params not in db["players"]:
             db["players"].append(params)
             self.commandhandler._save_server_db(server, db)
