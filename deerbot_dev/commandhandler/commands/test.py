@@ -22,6 +22,9 @@ class Command(ch.Command):
         self.commandhandler = commandhandler
         super().__init__(commandlist)
 
+    def GLOBAL(self, server):
+        pass
+
     # testing commands
     def test(self, server, params, message):
         return "server id: " + str(server) + ", server database: " + str(self.commandhandler._server_db(server))

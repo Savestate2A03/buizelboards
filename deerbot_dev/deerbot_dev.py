@@ -42,8 +42,11 @@ class DeerbotDev(discord.Client):
         # set up commands
         self.commandhandler = CommandHandler(self.data)
 
+        intents = discord.Intents.default()
+        intents.message_content = True
+
         # set up bot
-        super().__init__()
+        super().__init__(intents=intents)
 
     def api_key(self):
         return self.settings["discord_api_key"]
@@ -59,6 +62,9 @@ class DeerbotDev(discord.Client):
         print('Logged in as {0.user}'.format(self))
 
     async def on_message(self, message):
+        print("---------------- message! --------------")
+        print(message.content.strip())
+
         if message.author == self.user:
             return
 

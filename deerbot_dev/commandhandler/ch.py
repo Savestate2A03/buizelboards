@@ -22,7 +22,7 @@ class CommandHandler:
         ]
 
         # import modules based on name (in the commands directory)
-        added_modules = ["test", "lumch", "lunch"]
+        added_modules = ["test", "buizelboards"]
         for module in added_modules:
             imported_module = importlib.import_module("." + module, package="deerbot_dev.commandhandler.commands")
             commands = imported_module.Command(self)
