@@ -211,10 +211,10 @@ class Command(ch.Command):
             msg = ""
             if unranked:
                 joined = [('`' + player + '`') for player in unranked]
-                msg += f"\nUnranked not included: {', '.join(unranked)}"
+                msg += f"\nUnranked not included: {', '.join(joined)}"
             if removed:
                 joined = [('`' + player + '`') for player in removed]
-                msg += f"\nPlayers removed for not existing: {', '.join(removed)}"
+                msg += f"\nPlayers removed for not existing: {', '.join(joined)}"
             return {
                 "msg": msg,
                 "embed": embed
