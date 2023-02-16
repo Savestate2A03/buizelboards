@@ -62,9 +62,6 @@ class DeerbotDev(discord.Client):
         print('Logged in as {0.user}'.format(self))
 
     async def on_message(self, message):
-        print("---------------- message! --------------")
-        print(message.content.strip())
-
         if message.author == self.user:
             return
 
