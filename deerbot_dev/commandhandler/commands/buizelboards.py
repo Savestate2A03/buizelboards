@@ -1,4 +1,5 @@
 from deerbot_dev.commandhandler import ch
+import math
 import requests
 import discord
 import re
@@ -8,7 +9,7 @@ class Command(ch.Command):
         commandlist = [
                 {
                     "name": "leaderboard",
-                    "alias": ["boards", "leaderboards", "board"],
+                    "alias": ["boards", "leaderboards", "board", "lb"],
                     "function": self.leaderboards
                 },
                 {
@@ -131,13 +132,26 @@ class Command(ch.Command):
                 return True
         return False
 
-    def _top(self, players, server_name):
+    def _top(self, players, page, server_name):
         limit = 15
         leaderboard = ""
         rank = 1
+
+        highest_page = math.ceil(len(players)/limit)
+        if page > highest_page:
+            page = highest_page
+
+        top_dots = False
+
         for player in players:
-            if rank == limit + 1:
-                leaderboard += f"...\n{len(players)-limit} players not shown"
+            if rank <= limit*(page-1):
+                if not top_dots:
+                    leaderboard += f"...\n"
+                    top_dots = True
+                rank += 1
+                continue
+            if rank == limit*page + 1:
+                leaderboard += f"...\n{len(players)-limit*page} players below"
                 break
             if rank == 1:
                 leaderboard += "🥇 "
@@ -150,6 +164,7 @@ class Command(ch.Command):
             leaderboard += f"**{discord.utils.escape_markdown(player['tag'])}** ({player['connect_code']}) - {'{:.2f}'.format(round(player['rating'], 2))}\n"
             rank += 1
         embed=discord.Embed(title="🏆 Slippi Leaderboard", description=f"{server_name}'s leaderboard", color=0x18f334)
+        embed.set_footer(text=f"page {page}/{highest_page}")
         embed.add_field(name="", value=leaderboard, inline=False)
         return embed
 
@@ -226,8 +241,17 @@ class Command(ch.Command):
         rankings = self._get_all_rankings(server)
         if not rankings:
             return "No players in server database! Add them with !rankadd"
-        embed = self._top(rankings["players"], message.guild.name)
-        return self._finalize(embed, rankings)
+        try:
+            page = int(params)
+            if (page >= 1):
+                embed = self._top(rankings["players"], page, message.guild.name)
+                return self._finalize(embed, rankings)
+            else:
+                embed = self._top(rankings["players"], 1, message.guild.name)
+                return self._finalize(embed, rankings)
+        except:
+            embed = self._top(rankings["players"], 1, message.guild.name)
+            return self._finalize(embed, rankings)
 
     def rank(self, server, params, message):
         rankings = self._get_all_rankings(server)
