@@ -48,8 +48,11 @@ class CommandHandler:
 `{prefix}setprefix`
 Sets the bot prefix (defaults to `!`)
 
-`{prefix}leaderboard`
-List the top 15 players in the server
+`{prefix}leaderboard` / `{prefix}leaderboard X`
+List the top 15 players in the server by
+default, but will display a specific page
+in the leaderboards if provided.
+**Aliases**: `{prefix}boards`, `{prefix}leaderboards`, `{prefix}board`, `{prefix}lb`
 
 `{prefix}rank ABC#123`
 Get the rank of a connect code
@@ -59,6 +62,7 @@ Add a connect code to the server
 
 `{prefix}rankremove ABC#123`
 Remove a connect code from the server
+**Aliases**: `{prefix}rankdelete`
         """
 
     def _set_server_prefix(self, server, params, message):
